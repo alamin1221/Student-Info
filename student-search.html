@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Search Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Bangla&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card: #0d1526;
+    --highlight: rgba(0, 212, 255, 0.08);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  .header .badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+
+  .header h1 {
+    font-size: clamp(26px, 5vw, 42px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* Search Box */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 30px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  #searchInput {
+    width: 100%;
+    padding: 20px 20px 20px 54px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  #searchInput:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.12), 0 0 20px rgba(0,212,255,0.08);
+  }
+
+  #searchInput::placeholder { color: var(--muted); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 2px;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .stats-bar span {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .stats-bar .count {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Filter tabs */
+  .filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.6s ease 0.15s both;
+  }
+
+  .tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .tab.active, .tab:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.07);
+  }
+
+  /* Results */
+  #results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  .student-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    cursor: default;
+  }
+
+  .student-card:hover {
+    border-color: rgba(0,212,255,0.4);
+    background: var(--highlight);
+    transform: translateX(4px);
+  }
+
+  .student-card .serial {
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    font-weight: 700;
+    border: 1px solid rgba(0,212,255,0.25);
+    padding: 6px 4px;
+    border-radius: 3px;
+    background: rgba(0,212,255,0.05);
+    letter-spacing: 0;
+  }
+
+  .student-card .info { overflow: hidden; }
+
+  .student-card .name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f0f6ff;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .student-card .ids {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .student-card .id-badge {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+
+  .student-card .id-badge span {
+    color: var(--accent2);
+    font-weight: 700;
+  }
+
+  .student-card .rank {
+    font-size: 22px;
+    color: var(--border);
+    font-weight: 700;
+    text-align: right;
+    user-select: none;
+  }
+
+  /* Highlight matched text */
+  mark {
+    background: rgba(255, 107, 53, 0.3);
+    color: #ffb085;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+
+  .empty .emoji { font-size: 48px; margin-bottom: 16px; display: block; }
+  .empty p { font-size: 12px; letter-spacing: 1px; }
+
+  /* No search state */
+  .welcome {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .welcome .big { font-size: 56px; margin-bottom: 20px; display: block; }
+  .welcome p { font-size: 12px; letter-spacing: 1px; line-height: 2; }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .student-card { animation: pop 0.2s ease; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">Student Database</div>
+    <h1>Student Search Engine</h1>
+    <p>Search by Roll · Registration · Name</p>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="নাম, রোল বা রেজিস্ট্রেশন নম্বর লিখুন..." autocomplete="off" autofocus>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="tab active" data-filter="all">All</button>
+    <button class="tab" data-filter="name">Name only</button>
+    <button class="tab" data-filter="roll">Roll only</button>
+    <button class="tab" data-filter="reg">Reg. only</button>
+  </div>
+
+  <div class="stats-bar">
+    <span>Total: <span class="count" id="totalCount">211</span> students</span>
+    <span id="resultCount"></span>
+  </div>
+
+  <div id="results">
+    <div class="welcome">
+      <span class="big">🔍</span>
+      <p>Search করুন নাম, রোল নম্বর বা<br>রেজিস্ট্রেশন নম্বর দিয়ে।<br><br>ছোট বা বড় হাতের অক্ষর — কোনো সমস্যা নেই।</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const students = [
+  {roll:"24221011304",reg:"2110196",name:"Md. Rian Iqball"},
+  {roll:"24221011305",reg:"2110168",name:"Farjana Khatun"},
+  {roll:"24221011306",reg:"2110122",name:"Anusree Gain"},
+  {roll:"24221011307",reg:"2110195",name:"Md. Rakibul Islam"},
+  {roll:"24221011308",reg:"2110206",name:"Rumana Akter Rumi"},
+  {roll:"24221011309",reg:"2110013",name:"Jahid Amin Raj"},
+  {roll:"24221011310",reg:"2110015",name:"Akeya"},
+  {roll:"24221011311",reg:"2110207",name:"Md. Alvi Sheikh"},
+  {roll:"24221011312",reg:"2110159",name:"Puspita Mondol"},
+  {roll:"24221011313",reg:"2110036",name:"Md. Omar Sheikh"},
+  {roll:"24221011314",reg:"2110083",name:"Sumaiya Akter Achiya"},
+  {roll:"24221011315",reg:"2110154",name:"Tasmin Jannat Jeba"},
+  {roll:"24221011316",reg:"2110203",name:"Sheikh Naimul Haque"},
+  {roll:"24221011317",reg:"2110035",name:"Jeet Sarkar"},
+  {roll:"24221011318",reg:"2110146",name:"Md Akibur Jamadder"},
+  {roll:"24221011319",reg:"2110193",name:"Anik Mondal"},
+  {roll:"24221011320",reg:"2110184",name:"Bristy Rani Mondal"},
+  {roll:"24221011321",reg:"2110199",name:"Moriyam Khatun"},
+  {roll:"24221011322",reg:"2110162",name:"Sarita Islam Tisa"},
+  {roll:"24221011323",reg:"2110047",name:"Pritom Chakroborti"},
+  {roll:"24221011324",reg:"2110092",name:"Bappy Maholder"},
+  {roll:"24221011325",reg:"2110091",name:"Sandep Mondal"},
+  {roll:"24221011326",reg:"2110039",name:"Suriya Akter Sarabony"},
+  {roll:"24221011327",reg:"2110031",name:"Lia Aktar"},
+  {roll:"24221011328",reg:"2110165",name:"Md. Moudud Ahmed"},
+  {roll:"24221011329",reg:"2110025",name:"Halima"},
+  {roll:"24221011330",reg:"2110006",name:"Sneha Akter Tulona"},
+  {roll:"24221011331",reg:"2110144",name:"Ritu Gain"},
+  {roll:"24221011332",reg:"2110188",name:"Rohan Gazi"},
+  {roll:"24221011334",reg:"2110135",name:"Abidur Rahman"},
+  {roll:"24221011335",reg:"2110145",name:"Abu Umaiya"},
+  {roll:"24221011336",reg:"2110134",name:"M. Shawon Islam"},
+  {roll:"24221011337",reg:"2110129",name:"Shahana Akther Lima"},
+  {roll:"24221011338",reg:"2110143",name:"Prantik Das"},
+  {roll:"24221011339",reg:"2110151",name:"Monera Mim"},
+  {roll:"24221011340",reg:"2110018",name:"Ujjwal Sarkar"},
+  {roll:"24221011341",reg:"2110107",name:"Hridoy Barai"},
+  {roll:"24221011342",reg:"2110112",name:"Sabiya Khatun"},
+  {roll:"24221011343",reg:"2110022",name:"Mst. Sanjila Akter"},
+  {roll:"24221011344",reg:"2110102",name:"Suvojit Sarkar"},
+  {roll:"24221011345",reg:"2110190",name:"Afsana Mimi"},
+  {roll:"24221011346",reg:"2110200",name:"Arina Ferdousy Mitu"},
+  {roll:"24221011347",reg:"2110140",name:"Argha Halder"},
+  {roll:"24221011348",reg:"2110189",name:"Mst Tasmia Jahan Aysha"},
+  {roll:"24221011349",reg:"2110073",name:"Tonnima Khatun"},
+  {roll:"24221011350",reg:"2110133",name:"Mahiya Rahman Hridi"},
+  {roll:"24221011351",reg:"2110090",name:"Md. Hannan Hossain"},
+  {roll:"24221011352",reg:"2110178",name:"Shaharia"},
+  {roll:"24221011353",reg:"2110191",name:"Dipu Biswas"},
+  {roll:"24221011354",reg:"2110086",name:"Pizus Mondol"},
+  {roll:"24221011355",reg:"2110087",name:"Md. Murad Hosen"},
+  {roll:"24221011356",reg:"2110096",name:"Sudip Kumar Mistri"},
+  {roll:"24221011357",reg:"2110156",name:"Rahul Dash"},
+  {roll:"24221011358",reg:"2110008",name:"Mohtamem Islam"},
+  {roll:"24221011359",reg:"2110136",name:"S. M Saidi Al Sahab"},
+  {roll:"24221011360",reg:"2110004",name:"Supria Joddar"},
+  {roll:"24221011361",reg:"2110141",name:"Nazmul Hasan Mollick"},
+  {roll:"24221011362",reg:"2110032",name:"Mir Abdullah Al Sefat"},
+  {roll:"24221011363",reg:"2110174",name:"Shaikh Motabbir Hossain"},
+  {roll:"24221011364",reg:"2110027",name:"Sumaya Khatun"},
+  {roll:"24221011365",reg:"2110194",name:"Mst. tamanna Khatun"},
+  {roll:"24221011366",reg:"2110042",name:"Miss Jannatul Ferdus"},
+  {roll:"24221011367",reg:"2110052",name:"Md Main Hawlader"},
+  {roll:"24221011368",reg:"2110014",name:"Jiku Biswas"},
+  {roll:"24221011369",reg:"2110040",name:"Dip Sana"},
+  {roll:"24221011370",reg:"2110121",name:"Jahnur Aktar Shapna"},
+  {roll:"24221011371",reg:"2110138",name:"Khairuzzaman Mohin"},
+  {roll:"24221011372",reg:"2110153",name:"Md. Abdus Salam"},
+  {roll:"24221011373",reg:"2110137",name:"Mst. Bonni Khatun"},
+  {roll:"24221011374",reg:"2110007",name:"Shaikh Fahim Sobuj"},
+  {roll:"24221011375",reg:"2110078",name:"Sayma Sumiya Omi"},
+  {roll:"24221011376",reg:"2110048",name:"Udoy Kumar Bormon"},
+  {roll:"24221011377",reg:"2110019",name:"Masud Kamal"},
+  {roll:"24221011378",reg:"2110026",name:"Shukria Jannat Sonali"},
+  {roll:"24221011379",reg:"2110169",name:"Prosanto Das"},
+  {roll:"24221011380",reg:"2110037",name:"Dinobondhu Mondal"},
+  {roll:"24221011381",reg:"2110139",name:"Jannatul Akter Eva"},
+  {roll:"24221011382",reg:"2110005",name:"Md. Sohan"},
+  {roll:"24221011383",reg:"2110029",name:"Neshat Yeasmin Naima"},
+  {roll:"24221011384",reg:"2110012",name:"Sonali Biswas"},
+  {roll:"24221011385",reg:"2110045",name:"Md. Sajidul Islam"},
+  {roll:"24221011386",reg:"2110125",name:"Md. Golam Mostofa Sazu"},
+  {roll:"24221011387",reg:"2110081",name:"Md Masraful Islam Nime"},
+  {roll:"24221011388",reg:"2110161",name:"Md. esme Ajam"},
+  {roll:"24221011389",reg:"2110181",name:"Kamrul Sardar"},
+  {roll:"24221011390",reg:"2110157",name:"Sadia Afrin Bristy"},
+  {roll:"24221011391",reg:"2110021",name:"Md. Tanzir Khondokar"},
+  {roll:"24221011392",reg:"2110003",name:"Md. saiful Islam"},
+  {roll:"24221011393",reg:"2110166",name:"Md. Amzaduzzaman Abid"},
+  {roll:"24221011394",reg:"2110110",name:"Meherin Shaikh Ashea"},
+  {roll:"24221011395",reg:"2110016",name:"Nayan Kanti Mondal"},
+  {roll:"24221011396",reg:"2110167",name:"Pial Dey"},
+  {roll:"24221011397",reg:"2110065",name:"Md. Zilani Sheikh"},
+  {roll:"24221011398",reg:"2110172",name:"Sabia Akter Juite"},
+  {roll:"24221011399",reg:"2110180",name:"Tarin Khatun"},
+  {roll:"24221011400",reg:"2110177",name:"Nila Khatun"},
+  {roll:"24221011401",reg:"2110094",name:"Sumaiya Aktar"},
+  {roll:"24221011402",reg:"2110023",name:"Md. Rysul Islam"},
+  {roll:"24221011403",reg:"2110017",name:"Rahat Shaikh"},
+  {roll:"24221011404",reg:"2110170",name:"Antu Mistry"},
+  {roll:"24221011405",reg:"2110100",name:"Mohima Sekh"},
+  {roll:"24221011406",reg:"2110001",name:"Mridul Roy"},
+  {roll:"24221011407",reg:"2110150",name:"Sourav Kabiraj"},
+  {roll:"24221011408",reg:"2110179",name:"Mridul Mondal"},
+  {roll:"24221011409",reg:"2110147",name:"Miss. Shayla Sharmin"},
+  {roll:"24221011410",reg:"2110210",name:"Nabodip Sarkar"},
+  {roll:"24221011411",reg:"2110144",name:"Ritu Gain"},
+  {roll:"24221011412",reg:"2110158",name:"Lima Khatun"},
+  {roll:"24221011413",reg:"2110098",name:"Mst. Amina Tasnim"},
+  {roll:"24221011414",reg:"2110109",name:"Dipjoy Bagchi"},
+  {roll:"24221011415",reg:"2110108",name:"Apu Mollick"},
+  {roll:"24221011416",reg:"2110061",name:"Hoimonti Mondal"},
+  {roll:"24221011417",reg:"2110164",name:"Bivash Chandra Sana"},
+  {roll:"24221011418",reg:"2110064",name:"Jui Mridha"},
+  {roll:"24221011419",reg:"2110046",name:"Sabuj Dhali"},
+  {roll:"24221011420",reg:"2110020",name:"Arpan Dhali"},
+  {roll:"24221011421",reg:"2110106",name:"Md. Muzahid Hasan"},
+  {roll:"24221011422",reg:"2110128",name:"Al Amin"},
+  {roll:"24221011423",reg:"2110075",name:"Arnika"},
+  {roll:"24221011424",reg:"2110011",name:"Most Eshany"},
+  {roll:"24221011425",reg:"2110163",name:"Avi Dutta"},
+  {roll:"24221011426",reg:"2110059",name:"Abdullah Al Asif"},
+  {roll:"24221011427",reg:"2110211",name:"Mozahidulhossain"},
+  {roll:"24221011428",reg:"2110034",name:"Dhrubo Biswas"},
+  {roll:"24221011429",reg:"2110033",name:"Suvojit Mondal"},
+  {roll:"24221011430",reg:"2110003",name:"Md. saiful Islam"},
+  {roll:"24221011431",reg:"2110104",name:"Rupam Mondal"},
+  {roll:"24221011432",reg:"2110105",name:"Pronoy Basak"},
+  {roll:"24221011433",reg:"2110113",name:"Md Mujahid Hossain"},
+  {roll:"24221011434",reg:"2110155",name:"Saikat Bain"},
+  {roll:"24221011435",reg:"2110058",name:"Utso Bala"},
+  {roll:"24221011436",reg:"2110002",name:"Sk. Alvie Rahman"},
+  {roll:"24221011437",reg:"2110124",name:"Newaz Sharif"},
+  {roll:"24221011438",reg:"2110114",name:"Md. sohanuzzaman Gazi"},
+  {roll:"24221011439",reg:"2110131",name:"Prosanjit Mondal"},
+  {roll:"24221011440",reg:"2110186",name:"Md. Sejan"},
+  {roll:"24221011441",reg:"2110185",name:"Prodip Kumar Datta"},
+  {roll:"24221011442",reg:"2110053",name:"Hafsana Khatun"},
+  {roll:"24221011443",reg:"2110054",name:"Ratul"},
+  {roll:"24221011444",reg:"2110055",name:"Maria Islam Prity"},
+  {roll:"24221011445",reg:"2110127",name:"Md. arif Sana"},
+  {roll:"24221011446",reg:"2110187",name:"Farhan Sadik"},
+  {roll:"24221011447",reg:"2110205",name:"Ali Jam Jam Bokhari"},
+  {roll:"24221011448",reg:"2110060",name:"Md. Taybur Rahman"},
+  {roll:"24221011449",reg:"2110152",name:"Rajorshi Mondal"},
+  {roll:"24221011450",reg:"2110057",name:"Sajib Hasan"},
+  {roll:"24221011451",reg:"2110132",name:"Nuszat Jahan Sonaly"},
+  {roll:"24221011452",reg:"2110038",name:"Vabotosh Munda"},
+  {roll:"24221011453",reg:"2110066",name:"Injamam Fardin Ruddra"},
+  {roll:"24221011454",reg:"2110160",name:"Mithila Sultana Api"},
+  {roll:"24221011455",reg:"2110077",name:"Sammim Ara Halima"},
+  {roll:"24221011456",reg:"2110095",name:"Niloy Halder"},
+  {roll:"24221011457",reg:"2110093",name:"Mithila Akter Mitu"},
+  {roll:"24221011458",reg:"2110070",name:"Pompa Gain"},
+  {roll:"24221011459",reg:"2110062",name:"Aminul Islam"},
+  {roll:"24221011460",reg:"2110074",name:"Sumiya Aktar Pakhi"},
+  {roll:"24221011461",reg:"2110175",name:"Md. Mamun Hossen"},
+  {roll:"24221011462",reg:"2110115",name:"Hasibur Rahman"},
+  {roll:"24221011463",reg:"2110067",name:"Chanchal Sarkar"},
+  {roll:"24221011464",reg:"2110142",name:"Nazmus Shakib"},
+  {roll:"24221011465",reg:"2110085",name:"Md. Mahafuzur Rahman"},
+  {roll:"24221011466",reg:"2110209",name:"Romzan Ali Morol"},
+  {roll:"24221011467",reg:"2110208",name:"Md. Siam Islam Alvi"},
+  {roll:"24221011468",reg:"2110050",name:"Md. Shoriful Islam"},
+  {roll:"24221011469",reg:"2110148",name:"Afia Maksuda Farhana"},
+  {roll:"24221011470",reg:"2110197",name:"Md. Wasikqur Rahman"},
+  {roll:"24221011471",reg:"2110204",name:"Arifujjaman Akash"},
+  {roll:"24221011472",reg:"2110116",name:"Sadia Islan Disha"},
+  {roll:"24221011473",reg:"2110043",name:"Mst. Umme Hapsa"},
+  {roll:"24221011474",reg:"2110130",name:"Sumaya Khanam"},
+  {roll:"24221011475",reg:"2110117",name:"Mukta Khatun"},
+  {roll:"24221011476",reg:"2110111",name:"Abbir Hossen Numan"},
+  {roll:"24221011477",reg:"2110192",name:"Md Sawon Biswas"},
+  {roll:"24221011478",reg:"2110195",name:"Md. Rakibul Islam"},
+  {roll:"24221011479",reg:"2110143",name:"Prantik Das"},
+  {roll:"24221011480",reg:"2110119",name:"Pallob Roy"},
+  {roll:"24221011481",reg:"2110099",name:"Md. rakibul Islam"},
+  {roll:"24221011482",reg:"2110041",name:"Banya Biswas"},
+  {roll:"24221011483",reg:"2110056",name:"Md. arafat Khondokar"},
+  {roll:"24221011484",reg:"2110068",name:"Tabassum Tasmin Anonya"},
+  {roll:"24221011485",reg:"2110028",name:"Md. Ali Ahmed"},
+  {roll:"24221011486",reg:"2110201",name:"Suraya Shemu"},
+  {roll:"24221011487",reg:"2110171",name:"Sajjadbin Oline"},
+  {roll:"24221011488",reg:"2110183",name:"Mehedi Hasan Antor"},
+  {roll:"24221011489",reg:"2110212",name:"Bayazid Ahamed Anik"},
+  {roll:"24221011490",reg:"2110182",name:"Sajib Das"},
+  {roll:"24221011491",reg:"2110149",name:"Sabbir Goldar"},
+  {roll:"24221011492",reg:"2110176",name:"Simanto Mondol"},
+  {roll:"24221011493",reg:"2110126",name:"Md. riyaj Bhuyan"},
+  {roll:"24221011494",reg:"2110069",name:"Md. Jetu Shikder"},
+  {roll:"24221011495",reg:"2110030",name:"Tinny Talukder"},
+  {roll:"24221011496",reg:"2110101",name:"Md. mahim Bapary"},
+  {roll:"24221011497",reg:"2110076",name:"Hiramon Sarker"},
+  {roll:"24221011498",reg:"2110088",name:"Nadia Akter"},
+  {roll:"24221011499",reg:"2110072",name:"Saikul Islam Rakib"},
+  {roll:"24221011500",reg:"2110049",name:"Riya Mondal"},
+  {roll:"24221011501",reg:"2110084",name:"Md. Rakibul Hasan"},
+  {roll:"24221011502",reg:"2110097",name:"Ahsan"},
+  {roll:"24221011503",reg:"2110044",name:"Jubair"},
+  {roll:"24221011504",reg:"2110010",name:"Suraiya Jahan Nodi"},
+  {roll:"24221011505",reg:"2110123",name:"Md Sadik Sikder"},
+  {roll:"24221011506",reg:"2110071",name:"Md. Sarafayat Shahriya"},
+  {roll:"24221011507",reg:"2110051",name:"Durjoy Halder"},
+  {roll:"24221011508",reg:"2110080",name:"Hridoy Mondal"},
+  {roll:"24221011509",reg:"2110079",name:"Sabbir Talukder"},
+  {roll:"24221011510",reg:"2110089",name:"Md. Habibullah Rahman"},
+  {roll:"24221011511",reg:"2110103",name:"Leon Munna"}
+];
+
+let activeFilter = 'all';
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeFilter = tab.dataset.filter;
+    doSearch();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', doSearch);
+
+function highlight(text, query) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+}
+
+function doSearch() {
+  const raw = document.getElementById('searchInput').value.trim();
+  const q = raw.toLowerCase();
+  const resultsEl = document.getElementById('results');
+  const countEl = document.getElementById('resultCount');
+
+  if (!q) {
+    resultsEl.innerHTML = `<div class="welcome"><span class="big">🔍</span><p>Search করুন নাম, রোল নম্বর বা<br>রেজিস্ট্রেশন নম্বর দিয়ে।<br><br>ছোট বা বড় হাতের অক্ষর — কোনো সমস্যা নেই।</p></div>`;
+    countEl.textContent = '';
+    return;
+  }
+
+  const matched = students.filter(s => {
+    if (activeFilter === 'name') return s.name.toLowerCase().includes(q);
+    if (activeFilter === 'roll') return s.roll.includes(q);
+    if (activeFilter === 'reg')  return s.reg.includes(q);
+    return s.name.toLowerCase().includes(q) || s.roll.includes(q) || s.reg.includes(q);
+  });
+
+  countEl.textContent = `Found: ${matched.length}`;
+
+  if (matched.length === 0) {
+    resultsEl.innerHTML = `<div class="empty"><span class="emoji">😕</span><p>কোনো ফলাফল পাওয়া যায়নি।<br>অন্য কিছু দিয়ে চেষ্টা করুন।</p></div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = matched.map((s, i) => `
+    <div class="student-card">
+      <div class="serial">#${String(i+1).padStart(2,'0')}</div>
+      <div class="info">
+        <div class="name">${highlight(s.name, raw)}</div>
+        <div class="ids">
+          <div class="id-badge">Roll: <span>${highlight(s.roll, raw)}</span></div>
+          <div class="id-badge">Reg: <span>${highlight(s.reg, raw)}</span></div>
+        </div>
+      </div>
+      <div class="rank">${i+1}</div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
